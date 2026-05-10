@@ -20,7 +20,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import kotlinx.coroutines.launch
 import me.magnum.melonds.domain.model.rom.Rom
 import me.magnum.melonds.domain.model.rom.config.RomConfig
@@ -46,7 +45,6 @@ fun RomDetailsScreen(
     onRetroAchievementsRetryLoad: () -> Unit,
     onViewAchievement: (RAAchievement) -> Unit,
 ) {
-    val systemUiController = rememberSystemUiController()
     val pagerState = rememberPagerState(
         initialPage = RomDetailsTab.CONFIG.tabIndex,
         pageCount = { RomDetailsTab.entries.size },
@@ -63,8 +61,6 @@ fun RomDetailsScreen(
             Unit
         }
     }
-
-    systemUiController.isNavigationBarContrastEnforced = false
 
     Scaffold(
         modifier = Modifier.onPreviewKeyEvent {

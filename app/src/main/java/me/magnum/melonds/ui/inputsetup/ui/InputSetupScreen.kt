@@ -46,7 +46,6 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import me.magnum.melonds.R
@@ -86,11 +85,7 @@ private fun InputSetupScreenContent(
     onCancelInputConfiguration: () -> Unit,
     onBackClick: () -> Unit,
 ) {
-    val systemUiController = rememberSystemUiController()
     val focusManager = LocalFocusManager.current
-
-    systemUiController.setStatusBarColor(MaterialTheme.colors.primaryVariant)
-    systemUiController.isNavigationBarContrastEnforced = false
 
     BackHandler(enabled = inputUnderConfiguration != null) {
         onCancelInputConfiguration()

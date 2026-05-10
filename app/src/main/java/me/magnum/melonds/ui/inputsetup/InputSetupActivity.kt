@@ -29,9 +29,7 @@ class InputSetupActivity : AppCompatActivity() {
     private val referenceAxisValues = mutableMapOf<Int, Float>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge(
-            navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
-        )
+        enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT))
         super.onCreate(savedInstanceState)
 
         setContent {
