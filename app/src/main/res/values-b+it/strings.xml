@@ -449,6 +449,10 @@
         <item>HQ4X</item>
         <item>Quilez</item>
         <item>LCD</item>
+        <item>Linee di scansione</item>
+        <item>2xBR + dot</item>
+        <item>4xBR + dot</item>
+        <item>5xBR + dot</item>
     </string-array>
 
     <string-array name="dsi_camera_source_options">

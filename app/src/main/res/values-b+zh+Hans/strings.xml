@@ -546,6 +546,10 @@
         <item>HQ4X</item>
         <item>Quilez</item>
         <item>LCD</item>
+        <item>扫描线</item>
+        <item>2xBR + 点阵</item>
+        <item>4xBR + 点阵</item>
+        <item>5xBR + 点阵</item>
     </string-array>
 
     <string-array name="dsi_camera_source_options">
