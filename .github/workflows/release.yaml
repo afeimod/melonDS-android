@@ -1,11 +1,8 @@
 name: melonDS Android Release
- 
+
+# 仅手动触发,不再监听 tag push
 on:
-  # Trigger action when a tag is pushed
-  push:
-    tags:
-      - '*'
-      - '!nightly-release'
+  workflow_dispatch:
 
 jobs:
   github-release:
@@ -24,32 +21,23 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      # 不再做 keystore 解码、签名密码注入;签名放到 mt 工具手动完成
       - name: Build melonDS Android
         env:
-          MELONDS_KEYSTORE: ${{ secrets.MELONDS_KEYSTORE }}
-          MELONDS_KEYSTORE_PASSWORD: ${{ secrets.MELONDS_KEYSTORE_PASSWORD }}
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
-          echo "$MELONDS_KEYSTORE" | base64 -d > ${{runner.workspace}}/keystore.jks
-          echo "MELONDS_KEYSTORE=${{runner.workspace}}/keystore.jks" >> local.properties
-          echo "MELONDS_KEYSTORE_PASSWORD=$MELONDS_KEYSTORE_PASSWORD" >> local.properties
-          echo "MELONDS_KEY_ALIAS=melonds" >> local.properties
-          echo "MELONDS_KEY_PASSWORD=$MELONDS_KEYSTORE_PASSWORD" >> local.properties
           chmod +x ./gradlew
           ./gradlew :app:assembleGitHubProdRelease
 
-      - name: Get Tag and Version
+      - name: Get Version
         id: release_params
-        run: |
-          echo TAG=${GITHUB_REF/refs\/tags\//} >> $GITHUB_OUTPUT
-          echo VERSION=$(grep -oP 'versionName = "\K(.*?)(?=")' buildSrc/src/main/kotlin/AppConfig.kt) >> $GITHUB_OUTPUT
+        run: echo VERSION=$(grep -oP 'versionName = "\K(.*?)(?=")' buildSrc/src/main/kotlin/AppConfig.kt) >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         id: create_release
         uses: ncipollo/release-action@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ steps.release_params.outputs.TAG }}
           name: ${{ steps.release_params.outputs.VERSION }}
           bodyFile: ./.github/changelog/gitHub.md
           artifacts: app/build/outputs/apk/gitHubProd/release/app-gitHub-prod-release.apk
@@ -80,18 +68,11 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      # 不再做 keystore 解码、签名密码注入;签名放到 mt 工具手动完成
       - name: Build melonDS Android
         env:
-          MELONDS_KEYSTORE: ${{ secrets.MELONDS_KEYSTORE }}
-          MELONDS_KEYSTORE_PASSWORD: ${{ secrets.MELONDS_KEYSTORE_PASSWORD }}
-          MELONDS_KEY_PASSWORD: ${{ secrets.MELONDS_KEYSTORE_PLAYSTORE_PASSWORD }}
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
-          echo "$MELONDS_KEYSTORE" | base64 -d > ${{runner.workspace}}/keystore.jks
-          echo "MELONDS_KEYSTORE=${{runner.workspace}}/keystore.jks" >> local.properties
-          echo "MELONDS_KEYSTORE_PASSWORD=$MELONDS_KEYSTORE_PASSWORD" >> local.properties
-          echo "MELONDS_KEY_ALIAS=melonds-playstore" >> local.properties
-          echo "MELONDS_KEY_PASSWORD=$MELONDS_KEY_PASSWORD" >> local.properties
           chmod +x ./gradlew
           ./gradlew :app:assemblePlayStoreProdRelease
 
