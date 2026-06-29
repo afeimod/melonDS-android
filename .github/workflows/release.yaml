@@ -38,6 +38,8 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          # 手动触发没有 push tag,用 versionName 当 release tag(可重复更新)
+          tag: ${{ steps.release_params.outputs.VERSION }}
           name: ${{ steps.release_params.outputs.VERSION }}
           bodyFile: ./.github/changelog/gitHub.md
           artifacts: app/build/outputs/apk/gitHubProd/release/app-gitHub-prod-release.apk
