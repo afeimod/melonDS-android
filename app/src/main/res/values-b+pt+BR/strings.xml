@@ -333,6 +333,7 @@
     </string-array>
 
     <string-array name="video_filtering_options">
+
         <item>Nenhum</item>
         <item>Linear</item>
         <item>2xBR</item>
@@ -342,8 +343,9 @@
         <item>LCD</item>
         <item>Linhas de varredura</item>
         <item>2xBR + dot</item>
-        <item>4xBR + dot</item>
-        <item>5xBR + dot</item>
+        <item>2xBR + scanlines</item>
+        <item>HQ4X + dot</item>
+    
     </string-array>
 
     <string-array name="audio_interpolation_options">

@@ -601,48 +601,219 @@ class ShaderProgramSource private constructor(val textureFiltering: TextureFilte
                 )
         )
 
-        // 4xBR + dot
-        // Four diagonal-direction tests (NW/NE/SW/SE), each mirroring the
-        // 2xBR rule rotated by 90/180/270 degrees. Sharper than 2xBR.
-        val Xbr4DotShader = ShaderProgramSource(
+
+        // HQ4X + dot
+        // Combines the existing Hq4xShader (4x scale via weighted neighbour
+        // blend) with the 9-point dot bloom used in the xBR+dot family.
+        // The Hq4x output becomes the centre of the dot lookup, with 8
+        // additional texture reads around it.
+        val Hq4xDotShader = ShaderProgramSource(
             TextureFiltering.NEAREST,
-            xbrDotVert(),
+            "attribute vec2 vPos;\n" +
+                    "attribute vec2 vUV;\n" +
+                    "attribute float vAlpha;\n" +
+                    "varying vec4 uv[7];\n" +
+                    "varying float alpha;\n" +
+                    "varying vec2 pixel_no;\n" +
+                    "" +
+                    "void main()\n" +
+                    "{\n" +
+                    "    vec2 dg1 = 0.5 / vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT);\n" +
+                    "    vec2 dg2 = vec2(-dg1.x, dg1.y);\n" +
+                    "    vec2 sd1 = dg1 * 0.5;\n" +
+                    "    vec2 sd2 = dg2 * 0.5;\n" +
+                    "    vec2 ddx = vec2(dg1.x, 0.0);\n" +
+                    "    vec2 ddy = vec2(0.0, dg1.y);\n" +
+                    "" +
+                    "    gl_Position = vec4(vPos, 0.0, 1.0);\n" +
+                    "    uv[0].xy = vUV;\n" +
+                    "    uv[1].xy = vUV - sd1;\n" +
+                    "    uv[2].xy = vUV - sd2;\n" +
+                    "    uv[3].xy = vUV + sd1;\n" +
+                    "    uv[4].xy = vUV + sd2;\n" +
+                    "    uv[5].xy = vUV - dg1;\n" +
+                    "    uv[6].xy = vUV + dg1;\n" +
+                    "    uv[5].zw = vUV - dg2;\n" +
+                    "    uv[6].zw = vUV + dg2;\n" +
+                    "    uv[1].zw = vUV - ddy;\n" +
+                    "    uv[2].zw = vUV + ddx;\n" +
+                    "    uv[3].zw = vUV + ddy;\n" +
+                    "    uv[4].zw = vUV - ddx;\n" +
+                    "    pixel_no = vUV * vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT);\n" +
+                    "    alpha = vAlpha;\n" +
+                    "}",
             "#ifdef GL_FRAGMENT_PRECISION_HIGH\n" +
-                "precision highp float;\n" +
-                "#else\n" +
-                "precision mediump float;\n" +
-                "#endif\n" +
-                xbrDotFrag(
-                    "if (xbrReduce(H)==xbrReduce(F) && xbrReduce(H)!=xbrReduce(E) && ((xbrReduce(E)==xbrReduce(G) && (xbrReduce(H)==xbrReduce(I) || xbrReduce(E)==xbrReduce(D))) || (xbrReduce(E)==xbrReduce(C) && (xbrReduce(H)==xbrReduce(I) || xbrReduce(E)==xbrReduce(B))))) { res = mix(E, F, 0.5); }\n" +
-                        "    else if (xbrReduce(B)==xbrReduce(D) && xbrReduce(B)!=xbrReduce(E) && ((xbrReduce(E)==xbrReduce(A) && (xbrReduce(B)==xbrReduce(I) || xbrReduce(E)==xbrReduce(C))) || (xbrReduce(E)==xbrReduce(G) && (xbrReduce(B)==xbrReduce(I) || xbrReduce(E)==xbrReduce(F))))) { res = mix(E, D, 0.5); }\n" +
-                        "    else if (xbrReduce(A)==xbrReduce(C) && xbrReduce(A)!=xbrReduce(E) && ((xbrReduce(E)==xbrReduce(B) && (xbrReduce(A)==xbrReduce(I) || xbrReduce(E)==xbrReduce(D))) || (xbrReduce(E)==xbrReduce(F) && (xbrReduce(A)==xbrReduce(I) || xbrReduce(E)==xbrReduce(H))))) { res = mix(E, C, 0.5); }\n" +
-                        "    else if (xbrReduce(G)==xbrReduce(I) && xbrReduce(G)!=xbrReduce(E) && ((xbrReduce(E)==xbrReduce(H) && (xbrReduce(G)==xbrReduce(I) || xbrReduce(E)==xbrReduce(F))) || (xbrReduce(E)==xbrReduce(D) && (xbrReduce(G)==xbrReduce(I) || xbrReduce(E)==xbrReduce(B))))) { res = mix(E, I, 0.5); }\n"
-                )
+                    "precision highp float;\n" +
+                    "#else\n" +
+                    "precision mediump float;\n" +
+                    "#endif\n" +
+                    "uniform sampler2D tex;\n" +
+                    "varying vec4 uv[7];\n" +
+                    "varying float alpha;\n" +
+                    "varying vec2 pixel_no;\n" +
+                    "" +
+                    "const float mx = 1.00;\n" +
+                    "const float k = -1.10;\n" +
+                    "const float max_w = 0.75;\n" +
+                    "const float min_w = 0.03;\n" +
+                    "const float lum_add = 0.33;\n" +
+                    "" +
+                    "vec3 dotLookup(vec2 offset, vec3 color) {\n" +
+                    "    vec2 delta = fract(pixel_no) - (offset + vec2(0.5));\n" +
+                    "    float dist = sqrt(dot(delta, delta));\n" +
+                    "    float bright = dot(color, vec3(0.30, 0.55, 0.15));\n" +
+                    "    float bloom = mix(1.05, 0.95, bright);\n" +
+                    "    return color * exp(-1.65 * dist * bloom);\n" +
+                    "}\n" +
+                    "" +
+                    "void main()\n" +
+                    "{\n" +
+                    "    vec3 c  = texture2D(tex, uv[0].xy).bgr;\n" +
+                    "    vec3 i1 = texture2D(tex, uv[1].xy).bgr;\n" +
+                    "    vec3 i2 = texture2D(tex, uv[2].xy).bgr;\n" +
+                    "    vec3 i3 = texture2D(tex, uv[3].xy).bgr;\n" +
+                    "    vec3 i4 = texture2D(tex, uv[4].xy).bgr;\n" +
+                    "    vec3 o1 = texture2D(tex, uv[5].xy).bgr;\n" +
+                    "    vec3 o3 = texture2D(tex, uv[6].xy).bgr;\n" +
+                    "    vec3 o2 = texture2D(tex, uv[5].zw).bgr;\n" +
+                    "    vec3 o4 = texture2D(tex, uv[6].zw).bgr;\n" +
+                    "    vec3 s1 = texture2D(tex, uv[1].zw).bgr;\n" +
+                    "    vec3 s2 = texture2D(tex, uv[2].zw).bgr;\n" +
+                    "    vec3 s3 = texture2D(tex, uv[3].zw).bgr;\n" +
+                    "    vec3 s4 = texture2D(tex, uv[4].zw).bgr;\n" +
+                    "    vec3 dt = vec3(1.0,1.0,1.0);\n" +
+                    "" +
+                    "    float ko1=dot(abs(o1-c),dt);\n" +
+                    "    float ko2=dot(abs(o2-c),dt);\n" +
+                    "    float ko3=dot(abs(o3-c),dt);\n" +
+                    "    float ko4=dot(abs(o4-c),dt);\n" +
+                    "" +
+                    "    float k1=min(dot(abs(i1-i3),dt),max(ko1,ko3));\n" +
+                    "    float k2=min(dot(abs(i2-i4),dt),max(ko2,ko4));\n" +
+                    "" +
+                    "    float w1 = k2; if(ko3<ko1) w1*=ko3/ko1;\n" +
+                    "    float w2 = k1; if(ko4<ko2) w2*=ko4/ko2;\n" +
+                    "    float w3 = k2; if(ko1<ko3) w3*=ko1/ko3;\n" +
+                    "    float w4 = k1; if(ko2<ko4) w4*=ko2/ko4;\n" +
+                    "" +
+                    "    c=(w1*o1+w2*o2+w3*o3+w4*o4+0.001*c)/(w1+w2+w3+w4+0.001);\n" +
+                    "" +
+                    "    w1 = k*dot(abs(i1-c)+abs(i3-c),dt)/(0.125*dot(i1+i3,dt)+lum_add);\n" +
+                    "    w2 = k*dot(abs(i2-c)+abs(i4-c),dt)/(0.125*dot(i2+i4,dt)+lum_add);\n" +
+                    "    w3 = k*dot(abs(s1-c)+abs(s3-c),dt)/(0.125*dot(s1+s3,dt)+lum_add);\n" +
+                    "    w4 = k*dot(abs(s2-c)+abs(s4-c),dt)/(0.125*dot(s2+s4,dt)+lum_add);\n" +
+                    "" +
+                    "    w1 = clamp(w1+mx,min_w,max_w);\n" +
+                    "    w2 = clamp(w2+mx,min_w,max_w);\n" +
+                    "    w3 = clamp(w3+mx,min_w,max_w);\n" +
+                    "    w4 = clamp(w4+mx,min_w,max_w);\n" +
+                    "" +
+                    "    vec3 res = (w1*(i1+i3)+w2*(i2+i4)+w3*(s1+s3)+w4*(s2+s4)+c)/(2.0*(w1+w2+w3+w4)+1.0);\n" +
+                    "" +
+                    "    // 9-point dot bloom on the Hq4x output\n" +
+                    "    vec2 ps = 1.0 / vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT);\n" +
+                    "    vec3 c00 = texture2D(tex, vUV + vec2(-ps.x, -ps.y)).bgr;\n" +
+                    "    vec3 c10 = texture2D(tex, vUV + vec2( 0.0,  -ps.y)).bgr;\n" +
+                    "    vec3 c20 = texture2D(tex, vUV + vec2( ps.x,  -ps.y)).bgr;\n" +
+                    "    vec3 c01 = texture2D(tex, vUV + vec2(-ps.x,   0.0)).bgr;\n" +
+                    "    vec3 c11 = res;\n" +
+                    "    vec3 c21 = texture2D(tex, vUV + vec2( ps.x,   0.0)).bgr;\n" +
+                    "    vec3 c02 = texture2D(tex, vUV + vec2(-ps.x,  ps.y)).bgr;\n" +
+                    "    vec3 c12 = texture2D(tex, vUV + vec2( 0.0,   ps.y)).bgr;\n" +
+                    "    vec3 c22 = texture2D(tex, vUV + vec2( ps.x,   ps.y)).bgr;\n" +
+                    "    vec3 mid = dotLookup(vec2( 0.0,  0.0), c11);\n" +
+                    "    vec3 sum = vec3(0.0);\n" +
+                    "    sum += dotLookup(vec2(-1.0, -1.0), c00);\n" +
+                    "    sum += dotLookup(vec2( 0.0, -1.0), c10);\n" +
+                    "    sum += dotLookup(vec2( 1.0, -1.0), c20);\n" +
+                    "    sum += dotLookup(vec2(-1.0,  0.0), c01);\n" +
+                    "    sum += mid;\n" +
+                    "    sum += dotLookup(vec2( 1.0,  0.0), c21);\n" +
+                    "    sum += dotLookup(vec2(-1.0,  1.0), c02);\n" +
+                    "    sum += dotLookup(vec2( 0.0,  1.0), c12);\n" +
+                    "    sum += dotLookup(vec2( 1.0,  1.0), c22);\n" +
+                    "    gl_FragColor.rgb = mix(mid, sum, 0.25);\n" +
+                    "    gl_FragColor.a = alpha;\n" +
+                    "}"
         )
 
-        // 5xBR + dot
-        // Same four diagonals as 4xBR, plus four cardinals (N/S/W/E) which
-        // is the "+1" branch that distinguishes 5xBR from 4xBR in Hyllian's
-        // v4.0. Cardinal rules: a 3-pixel pattern along a cardinal axis
-        // matches, mix with the cardinal neighbour.
-        val Xbr5DotShader = ShaderProgramSource(
+
+        // 2xBR + scanlines
+        // Combines the existing XbrShader's single-diagonal rule with the
+        // scanline darkening from ScanlinesShader. The XbrShader result is
+        // modulated by the sin pattern, no extra texture reads beyond the
+        // 3x3 neighbour sample the XbrShader already needs.
+        val Xbr2ScanlinesShader = ShaderProgramSource(
             TextureFiltering.NEAREST,
-            xbrDotVert(),
+            "attribute vec2 vPos;\n" +
+                    "attribute vec2 vUV;\n" +
+                    "attribute float vAlpha;\n" +
+                    "varying vec2 uv0;\n" +
+                    "varying vec2 uv1;\n" +
+                    "varying vec2 uv2;\n" +
+                    "varying vec2 uv3;\n" +
+                    "varying vec2 uv4;\n" +
+                    "varying vec2 uv5;\n" +
+                    "varying vec2 uv6;\n" +
+                    "varying vec2 uv7;\n" +
+                    "varying float alpha;\n" +
+                    "varying vec2 omega;\n" +
+                    "" +
+                    "void main() {\n" +
+                    "    vec2 ps = 1.0 / vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT);\n" +
+                    "    uv0 = vUV;\n" +
+                    "    uv1 = uv0 + vec2(-ps.x, -ps.y);\n" +
+                    "    uv2 = uv0 + vec2( 0.0, -ps.y);\n" +
+                    "    uv3 = uv0 + vec2( ps.x, -ps.y);\n" +
+                    "    uv4 = uv0 + vec2(-ps.x,  0.0);\n" +
+                    "    uv5 = uv0 + vec2( ps.x,  0.0);\n" +
+                    "    uv6 = uv0 + vec2(-ps.x,  ps.y);\n" +
+                    "    uv7 = uv0 + vec2( ps.x,  ps.y);\n" +
+                    "    alpha = vAlpha;\n" +
+                    "    omega = vec2(3.1415 * float($TEXTURE_WIDTH) * float($TEXTURE_WIDTH) / float($TEXTURE_WIDTH), 2.0 * 3.1415 * float($TEXTURE_HEIGHT));\n" +
+                    "    gl_Position = vec4(vPos, 0.0, 1.0);\n" +
+                    "}",
             "#ifdef GL_FRAGMENT_PRECISION_HIGH\n" +
-                "precision highp float;\n" +
-                "#else\n" +
-                "precision mediump float;\n" +
-                "#endif\n" +
-                xbrDotFrag(
-                    "if (xbrReduce(H)==xbrReduce(F) && xbrReduce(H)!=xbrReduce(E) && ((xbrReduce(E)==xbrReduce(G) && (xbrReduce(H)==xbrReduce(I) || xbrReduce(E)==xbrReduce(D))) || (xbrReduce(E)==xbrReduce(C) && (xbrReduce(H)==xbrReduce(I) || xbrReduce(E)==xbrReduce(B))))) { res = mix(E, F, 0.5); }\n" +
-                        "    else if (xbrReduce(B)==xbrReduce(D) && xbrReduce(B)!=xbrReduce(E) && ((xbrReduce(E)==xbrReduce(A) && (xbrReduce(B)==xbrReduce(I) || xbrReduce(E)==xbrReduce(C))) || (xbrReduce(E)==xbrReduce(G) && (xbrReduce(B)==xbrReduce(I) || xbrReduce(E)==xbrReduce(F))))) { res = mix(E, D, 0.5); }\n" +
-                        "    else if (xbrReduce(A)==xbrReduce(C) && xbrReduce(A)!=xbrReduce(E) && ((xbrReduce(E)==xbrReduce(B) && (xbrReduce(A)==xbrReduce(I) || xbrReduce(E)==xbrReduce(D))) || (xbrReduce(E)==xbrReduce(F) && (xbrReduce(A)==xbrReduce(I) || xbrReduce(E)==xbrReduce(H))))) { res = mix(E, C, 0.5); }\n" +
-                        "    else if (xbrReduce(G)==xbrReduce(I) && xbrReduce(G)!=xbrReduce(E) && ((xbrReduce(E)==xbrReduce(H) && (xbrReduce(G)==xbrReduce(I) || xbrReduce(E)==xbrReduce(F))) || (xbrReduce(E)==xbrReduce(D) && (xbrReduce(G)==xbrReduce(I) || xbrReduce(E)==xbrReduce(B))))) { res = mix(E, I, 0.5); }\n" +
-                        "    else if (xbrReduce(B)==xbrReduce(F) && xbrReduce(B)!=xbrReduce(E) && ((xbrReduce(E)==xbrReduce(A) && (xbrReduce(B)==xbrReduce(C) || xbrReduce(E)==xbrReduce(I))) || (xbrReduce(E)==xbrReduce(G) && (xbrReduce(B)==xbrReduce(C) || xbrReduce(E)==xbrReduce(H))))) { res = mix(E, B, 0.3); }\n" +
-                        "    else if (xbrReduce(D)==xbrReduce(H) && xbrReduce(D)!=xbrReduce(E) && ((xbrReduce(E)==xbrReduce(C) && (xbrReduce(D)==xbrReduce(A) || xbrReduce(E)==xbrReduce(I))) || (xbrReduce(E)==xbrReduce(G) && (xbrReduce(D)==xbrReduce(A) || xbrReduce(E)==xbrReduce(F))))) { res = mix(E, H, 0.3); }\n" +
-                        "    else if (xbrReduce(A)==xbrReduce(G) && xbrReduce(A)!=xbrReduce(E) && ((xbrReduce(E)==xbrReduce(C) && (xbrReduce(A)==xbrReduce(B) || xbrReduce(E)==xbrReduce(D))) || (xbrReduce(E)==xbrReduce(I) && (xbrReduce(A)==xbrReduce(B) || xbrReduce(E)==xbrReduce(F))))) { res = mix(E, A, 0.3); }\n" +
-                        "    else if (xbrReduce(C)==xbrReduce(I) && xbrReduce(C)!=xbrReduce(E) && ((xbrReduce(E)==xbrReduce(A) && (xbrReduce(C)==xbrReduce(H) || xbrReduce(E)==xbrReduce(D))) || (xbrReduce(E)==xbrReduce(G) && (xbrReduce(C)==xbrReduce(H) || xbrReduce(E)==xbrReduce(F))))) { res = mix(E, C, 0.3); }\n"
-                )
+                    "precision highp float;\n" +
+                    "#else\n" +
+                    "precision mediump float;\n" +
+                    "#endif\n" +
+                    "uniform sampler2D tex;\n" +
+                    "varying vec2 uv0;\n" +
+                    "varying vec2 uv1;\n" +
+                    "varying vec2 uv2;\n" +
+                    "varying vec2 uv3;\n" +
+                    "varying vec2 uv4;\n" +
+                    "varying vec2 uv5;\n" +
+                    "varying vec2 uv6;\n" +
+                    "varying vec2 uv7;\n" +
+                    "varying float alpha;\n" +
+                    "varying vec2 omega;\n" +
+                    "" +
+                    "const vec3 xbr_dtt = vec3(65536.0, 255.0, 1.0);\n" +
+                    "float xbrReduce(vec3 color) { return dot(color, xbr_dtt); }\n" +
+                    "" +
+                    "const float base_brightness = 0.95;\n" +
+                    "const vec2 sine_comp = vec2(0.05, 0.15);\n" +
+                    "" +
+                    "void main() {\n" +
+                    "    vec2 ps = 1.0 / vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT);\n" +
+                    "    vec3 A = texture2D(tex, uv1).bgr;\n" +
+                    "    vec3 B = texture2D(tex, uv2).bgr;\n" +
+                    "    vec3 C = texture2D(tex, uv3).bgr;\n" +
+                    "    vec3 D = texture2D(tex, uv4).bgr;\n" +
+                    "    vec3 E = texture2D(tex, uv0).bgr;\n" +
+                    "    vec3 F = texture2D(tex, uv5).bgr;\n" +
+                    "    vec3 G = texture2D(tex, uv6).bgr;\n" +
+                    "    vec3 H = texture2D(tex, uv0 + vec2(0.0, ps.y)).bgr;\n" +
+                    "    vec3 I = texture2D(tex, uv7).bgr;\n" +
+                    "    vec3 res = E;\n" +
+                    "    if (xbrReduce(H)==xbrReduce(F) && xbrReduce(H)!=xbrReduce(E) && ((xbrReduce(E)==xbrReduce(G) && (xbrReduce(H)==xbrReduce(I) || xbrReduce(E)==xbrReduce(D))) || (xbrReduce(E)==xbrReduce(C) && (xbrReduce(H)==xbrReduce(I) || xbrReduce(E)==xbrReduce(B))))) { res = mix(E, F, 0.5); }\n" +
+                    "    // scanline modulation\n" +
+                    "    vec4 color = vec4(res, alpha);\n" +
+                    "    vec4 scanline = color * (base_brightness + dot(sine_comp * sin(uv0 * omega), vec2(1.0)));\n" +
+                    "    gl_FragColor = clamp(scanline, 0.0, 1.0);\n" +
+                    "}"
         )
     }
 }

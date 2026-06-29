@@ -548,8 +548,8 @@
         <item>LCD</item>
         <item>扫描线</item>
         <item>2xBR + 点阵</item>
-        <item>4xBR + 点阵</item>
-        <item>5xBR + 点阵</item>
+        <item>2xBR + 扫描线</item>
+        <item>HQ4X + 点阵</item>
     </string-array>
 
     <string-array name="dsi_camera_source_options">

@@ -541,6 +541,7 @@
     </string-array>
 
     <string-array name="video_filtering_options">
+
         <item>Нет</item>
         <item>Линейное</item>
         <item>2xBR</item>
@@ -550,8 +551,9 @@
         <item>LCD</item>
         <item>Сканлайны</item>
         <item>2xBR + dot</item>
-        <item>4xBR + dot</item>
-        <item>5xBR + dot</item>
+        <item>2xBR + scanlines</item>
+        <item>HQ4X + dot</item>
+    
     </string-array>
 
     <string-array name="dsi_camera_source_options">

@@ -56,8 +56,8 @@
         <item>lcd</item>
         <item>scanlines</item>
         <item>xbr2_dot</item>
-        <item>xbr4_dot</item>
-        <item>xbr5_dot</item>
+        <item>xbr2_scanlines</item>
+        <item>hq4x_dot</item>
     </string-array>
 
     <string-array name="dsi_camera_source_values">

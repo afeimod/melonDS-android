@@ -13,8 +13,8 @@ object VideoFilterShaderProvider {
         VideoFiltering.LCD to ShaderProgramSource.LcdShader,
         VideoFiltering.SCANLINES to ShaderProgramSource.ScanlinesShader,
         VideoFiltering.XBR2_DOT to ShaderProgramSource.Xbr2DotShader,
-        VideoFiltering.XBR4_DOT to ShaderProgramSource.Xbr4DotShader,
-        VideoFiltering.XBR5_DOT to ShaderProgramSource.Xbr5DotShader,
+        VideoFiltering.XBR2_SCANLINES to ShaderProgramSource.Xbr2ScanlinesShader,
+        VideoFiltering.HQ4X_DOT to ShaderProgramSource.Hq4xDotShader,
     )
 
     fun getShaderSource(filtering: VideoFiltering): ShaderProgramSource =

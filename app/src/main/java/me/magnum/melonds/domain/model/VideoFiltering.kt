@@ -10,6 +10,6 @@ enum class VideoFiltering {
     LCD,
     SCANLINES,
     XBR2_DOT,
-    XBR4_DOT,
-    XBR5_DOT
+    XBR2_SCANLINES,
+    HQ4X_DOT
 }
