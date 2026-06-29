@@ -55,9 +55,9 @@
         <item>quilez</item>
         <item>lcd</item>
         <item>scanlines</item>
-        <item>2xbr+dot</item>
-        <item>4xbr+dot</item>
-        <item>5xbr+dot</item>
+        <item>xbr2_dot</item>
+        <item>xbr4_dot</item>
+        <item>xbr5_dot</item>
     </string-array>
 
     <string-array name="dsi_camera_source_values">
