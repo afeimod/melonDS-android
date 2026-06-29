@@ -1,5 +1,4 @@
 # melonDS Android port
-Android port of [melonDS](https://melonds.kuribo64.net/), a DS and DSi emulator.
 mod fock！
 |Rom List|Dark Theme|Pocket Physics|Layout Editor|
 |---|---|---|---|
