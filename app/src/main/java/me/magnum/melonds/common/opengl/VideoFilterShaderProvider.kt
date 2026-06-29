@@ -12,8 +12,8 @@ object VideoFilterShaderProvider {
         VideoFiltering.QUILEZ to ShaderProgramSource.QuilezShader,
         VideoFiltering.LCD to ShaderProgramSource.LcdShader,
         VideoFiltering.SCANLINES to ShaderProgramSource.ScanlinesShader,
-        VideoFiltering.XBR2_DOT to ShaderProgramSource.NoFilterShader,
-        VideoFiltering.XBR4_DOT to ShaderProgramSource.NoFilterShader,
+        VideoFiltering.XBR2_DOT to ShaderProgramSource.Xbr2DotShader,
+        VideoFiltering.XBR4_DOT to ShaderProgramSource.Xbr4DotShader,
         VideoFiltering.XBR5_DOT to ShaderProgramSource.Xbr5DotShader,
     )
 
