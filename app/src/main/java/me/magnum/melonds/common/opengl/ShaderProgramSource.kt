@@ -511,13 +511,13 @@ class ShaderProgramSource private constructor(val textureFiltering: TextureFilte
                 "    float dx = ps.x;\n" +
                 "    float dy = ps.y;\n" +
                 "    uv0 = vUV;\n" +
-                "    uv1 = vUV + vec2(-dx, -2.0 * dy);\n" +
-                "    uv2 = vUV + vec2( 0.0,  -dy);\n" +
-                "    uv3 = vUV + vec2( dx,  -dy);\n" +
-                "    uv4 = vUV + vec2(-dx,  0.0);\n" +
-                "    uv5 = vUV + vec2( dx,  0.0);\n" +
-                "    uv6 = vUV + vec2(-dx,   dy);\n" +
-                "    uv7 = vUV + vec2( dx,   dy);\n" +
+                "    uv1 = uv0 + vec2(-dx, -2.0 * dy);\n" +
+                "    uv2 = uv0 + vec2( 0.0,  -dy);\n" +
+                "    uv3 = uv0 + vec2( dx,  -dy);\n" +
+                "    uv4 = uv0 + vec2(-dx,  0.0);\n" +
+                "    uv5 = uv0 + vec2( dx,  0.0);\n" +
+                "    uv6 = uv0 + vec2(-dx,   dy);\n" +
+                "    uv7 = uv0 + vec2( dx,   dy);\n" +
                 "    pixel_no = vUV * vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT);\n" +
                 "    alpha = vAlpha;\n" +
                 "    gl_Position = vec4(vPos, 0.0, 1.0);\n" +
@@ -587,16 +587,16 @@ class ShaderProgramSource private constructor(val textureFiltering: TextureFilte
                 "    vec3 I  = texture2D(tex, uv7).bgr;\n" +
                 "    vec3 A1 = texture2D(tex, uv1).bgr;\n" +
                 "    vec3 C1 = texture2D(tex, uv3).bgr;\n" +
-                "    vec3 G5 = texture2D(tex, vUV + vec2(-1.0,  2.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
-                "    vec3 I5 = texture2D(tex, vUV + vec2( 1.0,  2.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
-                "    vec3 I4 = texture2D(tex, vUV + vec2( 2.0,  1.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
-                "    vec3 F4 = texture2D(tex, vUV + vec2( 2.0,  0.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
-                "    vec3 A0 = texture2D(tex, vUV + vec2(-2.0, -1.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
-                "    vec3 D0 = texture2D(tex, vUV + vec2(-1.0, -1.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
-                "    vec3 G0 = texture2D(tex, vUV + vec2(-2.0,  1.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
+                "    vec3 G5 = texture2D(tex, uv0 + vec2(-1.0,  2.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
+                "    vec3 I5 = texture2D(tex, uv0 + vec2( 1.0,  2.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
+                "    vec3 I4 = texture2D(tex, uv0 + vec2( 2.0,  1.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
+                "    vec3 F4 = texture2D(tex, uv0 + vec2( 2.0,  0.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
+                "    vec3 A0 = texture2D(tex, uv0 + vec2(-2.0, -1.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
+                "    vec3 D0 = texture2D(tex, uv0 + vec2(-1.0, -1.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
+                "    vec3 G0 = texture2D(tex, uv0 + vec2(-2.0,  1.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
                 "    vec3 B1 = texture2D(tex, uv2).bgr;\n" +
-                "    vec3 C4 = texture2D(tex, vUV + vec2( 2.0, -1.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
-                "    vec3 H5 = texture2D(tex, vUV + vec2( 0.0,  2.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
+                "    vec3 C4 = texture2D(tex, uv0 + vec2( 2.0, -1.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
+                "    vec3 H5 = texture2D(tex, uv0 + vec2( 0.0,  2.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
                 "" +
                 "    vec4 b  = RGBtoYUV(B, D, H, F);\n" +
                 "    vec4 c  = RGBtoYUV(C, A, G, I);\n" +
@@ -638,15 +638,15 @@ class ShaderProgramSource private constructor(val textureFiltering: TextureFilte
                 "        if (px.w) { res = H; } else { res = D; }\n" +
                 "    }\n" +
                 "" +
-                "    vec3 c00 = texture2D(tex, vUV + vec2(-1.0,-1.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
-                "    vec3 c10 = texture2D(tex, vUV + vec2( 0.0,-1.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
-                "    vec3 c20 = texture2D(tex, vUV + vec2( 1.0,-1.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
-                "    vec3 c01 = texture2D(tex, vUV + vec2(-1.0, 0.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
+                "    vec3 c00 = texture2D(tex, uv0 + vec2(-1.0,-1.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
+                "    vec3 c10 = texture2D(tex, uv0 + vec2( 0.0,-1.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
+                "    vec3 c20 = texture2D(tex, uv0 + vec2( 1.0,-1.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
+                "    vec3 c01 = texture2D(tex, uv0 + vec2(-1.0, 0.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
                 "    vec3 c11 = res;\n" +
-                "    vec3 c21 = texture2D(tex, vUV + vec2( 1.0, 0.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
-                "    vec3 c02 = texture2D(tex, vUV + vec2(-1.0, 1.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
-                "    vec3 c12 = texture2D(tex, vUV + vec2( 0.0, 1.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
-                "    vec3 c22 = texture2D(tex, vUV + vec2( 1.0, 1.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
+                "    vec3 c21 = texture2D(tex, uv0 + vec2( 1.0, 0.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
+                "    vec3 c02 = texture2D(tex, uv0 + vec2(-1.0, 1.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
+                "    vec3 c12 = texture2D(tex, uv0 + vec2( 0.0, 1.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
+                "    vec3 c22 = texture2D(tex, uv0 + vec2( 1.0, 1.0)/vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT)).bgr;\n" +
                 "    vec3 mid = DotLookup(pixel_no, 0.0, 0.0, c11);\n" +
                 "    vec3 sum = vec3(0.0);\n" +
                 "    sum += DotLookup(pixel_no, -1.0,-1.0, c00);\n" +
