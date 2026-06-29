@@ -13,6 +13,8 @@ plugins {
 android {
     signingConfigs {
         create("release") {
+            // 签名已改为本地 mt 工具手动完成,这里不再从 keystore 读取
+            // 保留配置块以避免破坏其它可能的引用,但 release buildType 会改用 debug 签名
             val props = gradleLocalProperties(rootDir, providers)
             (props["MELONDS_KEYSTORE"] as String?)?.let { storeFile = file(it) }
             storePassword = props["MELONDS_KEYSTORE_PASSWORD"] as String? ?: ""
@@ -49,7 +51,8 @@ android {
         getByName("release") {
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.getByName("release")
+            // 用 debug 签名让 assembleRelease 不再依赖 keystore;出包后再用 mt 工具手动签名
+            signingConfig = signingConfigs.getByName("debug")
         }
         getByName("debug") {
             applicationIdSuffix = ".dev"
