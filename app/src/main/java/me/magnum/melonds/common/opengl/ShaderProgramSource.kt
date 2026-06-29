@@ -504,9 +504,16 @@ class ShaderProgramSource private constructor(val textureFiltering: TextureFilte
                 "varying float alpha;\n" +
                 "varying vec2 pixel_no;\n" +
                 "" +
-                "vec3 dotLookup(vec3 color) {\n" +
-                "    vec2 d = fract(pixel_no) - vec2(0.5);\n" +
-                "    float dist = sqrt(dot(d, d));\n" +
+                "// Same reduce trick as the existing XbrShader: pack RGB into a\n" +
+                "// single float so two colour samples compare as if they were\n" +
+                "// integers. This is more robust against GPU float drift than\n" +
+                "// a raw vec3 == vec3, which often returns false even when the\n" +
+                "// two samples are visually identical.\n" +
+                "const vec3 xbr_dtt = vec3(65536.0, 255.0, 1.0);\n" +
+                "float xbrReduce(vec3 color) { return dot(color, xbr_dtt); }\n" +
+                "vec3 dotLookup(vec2 offset, vec3 color) {\n" +
+                "    vec2 delta = fract(pixel_no) - (offset + vec2(0.5));\n" +
+                "    float dist = sqrt(dot(delta, delta));\n" +
                 "    float bright = dot(color, vec3(0.30, 0.55, 0.15));\n" +
                 "    float bloom = mix(1.05, 0.95, bright);\n" +
                 "    return color * exp(-1.65 * dist * bloom);\n" +
@@ -534,17 +541,17 @@ class ShaderProgramSource private constructor(val textureFiltering: TextureFilte
                 "    vec3 c02 = texture2D(tex, uv6).bgr;\n" +
                 "    vec3 c12 = texture2D(tex, uv0 + vec2(0.0, ps.y)).bgr;\n" +
                 "    vec3 c22 = texture2D(tex, uv7).bgr;\n" +
-                "    vec3 mid = dotLookup(c11);\n" +
+                "    vec3 mid = dotLookup(vec2( 0.0,  0.0), c11);\n" +
                 "    vec3 sum = vec3(0.0);\n" +
-                "    sum += dotLookup(c00);\n" +
-                "    sum += dotLookup(c10);\n" +
-                "    sum += dotLookup(c20);\n" +
-                "    sum += dotLookup(c01);\n" +
+                "    sum += dotLookup(vec2(-1.0, -1.0), c00);\n" +
+                "    sum += dotLookup(vec2( 0.0, -1.0), c10);\n" +
+                "    sum += dotLookup(vec2( 1.0, -1.0), c20);\n" +
+                "    sum += dotLookup(vec2(-1.0,  0.0), c01);\n" +
                 "    sum += mid;\n" +
-                "    sum += dotLookup(c21);\n" +
-                "    sum += dotLookup(c02);\n" +
-                "    sum += dotLookup(c12);\n" +
-                "    sum += dotLookup(c22);\n" +
+                "    sum += dotLookup(vec2( 1.0,  0.0), c21);\n" +
+                "    sum += dotLookup(vec2(-1.0,  1.0), c02);\n" +
+                "    sum += dotLookup(vec2( 0.0,  1.0), c12);\n" +
+                "    sum += dotLookup(vec2( 1.0,  1.0), c22);\n" +
                 "    gl_FragColor.rgb = mix(mid, sum, 0.25);\n" +
                 "    gl_FragColor.a = alpha;\n" +
                 "}"
@@ -590,7 +597,7 @@ class ShaderProgramSource private constructor(val textureFiltering: TextureFilte
                 "precision mediump float;\n" +
                 "#endif\n" +
                 xbrDotFrag(
-                    "if (H==F && H!=E && ((E==G && (H==I || E==D)) || (E==C && (H==I || E==B)))) { res = mix(E, F, 0.5); }\n"
+                    "if (xbrReduce(H)==xbrReduce(F) && xbrReduce(H)!=xbrReduce(E) && ((xbrReduce(E)==xbrReduce(G) && (xbrReduce(H)==xbrReduce(I) || xbrReduce(E)==xbrReduce(D))) || (xbrReduce(E)==xbrReduce(C) && (xbrReduce(H)==xbrReduce(I) || xbrReduce(E)==xbrReduce(B))))) { res = mix(E, F, 0.5); }\n"
                 )
         )
 
@@ -606,10 +613,10 @@ class ShaderProgramSource private constructor(val textureFiltering: TextureFilte
                 "precision mediump float;\n" +
                 "#endif\n" +
                 xbrDotFrag(
-                    "if (H==F && H!=E && ((E==G && (H==I || E==D)) || (E==C && (H==I || E==B)))) { res = mix(E, F, 0.5); }\n" +
-                        "    if (B==D && B!=E && ((E==A && (B==I || E==C)) || (E==G && (B==I || E==F)))) { res = mix(E, D, 0.5); }\n" +
-                        "    if (A==C && A!=E && ((E==B && (A==I || E==D)) || (E==F && (A==I || E==H)))) { res = mix(E, C, 0.5); }\n" +
-                        "    if (G==I && G!=E && ((E==H && (G==I || E==F)) || (E==D && (G==I || E==B)))) { res = mix(E, I, 0.5); }\n"
+                    "if (xbrReduce(H)==xbrReduce(F) && xbrReduce(H)!=xbrReduce(E) && ((xbrReduce(E)==xbrReduce(G) && (xbrReduce(H)==xbrReduce(I) || xbrReduce(E)==xbrReduce(D))) || (xbrReduce(E)==xbrReduce(C) && (xbrReduce(H)==xbrReduce(I) || xbrReduce(E)==xbrReduce(B))))) { res = mix(E, F, 0.5); }\n" +
+                        "    if (xbrReduce(B)==xbrReduce(D) && xbrReduce(B)!=xbrReduce(E) && ((xbrReduce(E)==xbrReduce(A) && (xbrReduce(B)==xbrReduce(I) || xbrReduce(E)==xbrReduce(C))) || (xbrReduce(E)==xbrReduce(G) && (xbrReduce(B)==xbrReduce(I) || xbrReduce(E)==xbrReduce(F))))) { res = mix(E, D, 0.5); }\n" +
+                        "    if (xbrReduce(A)==xbrReduce(C) && xbrReduce(A)!=xbrReduce(E) && ((xbrReduce(E)==xbrReduce(B) && (xbrReduce(A)==xbrReduce(I) || xbrReduce(E)==xbrReduce(D))) || (xbrReduce(E)==xbrReduce(F) && (xbrReduce(A)==xbrReduce(I) || xbrReduce(E)==xbrReduce(H))))) { res = mix(E, C, 0.5); }\n" +
+                        "    if (xbrReduce(G)==xbrReduce(I) && xbrReduce(G)!=xbrReduce(E) && ((xbrReduce(E)==xbrReduce(H) && (xbrReduce(G)==xbrReduce(I) || xbrReduce(E)==xbrReduce(F))) || (xbrReduce(E)==xbrReduce(D) && (xbrReduce(G)==xbrReduce(I) || xbrReduce(E)==xbrReduce(B))))) { res = mix(E, I, 0.5); }\n"
                 )
         )
 
@@ -627,14 +634,14 @@ class ShaderProgramSource private constructor(val textureFiltering: TextureFilte
                 "precision mediump float;\n" +
                 "#endif\n" +
                 xbrDotFrag(
-                    "if (H==F && H!=E && ((E==G && (H==I || E==D)) || (E==C && (H==I || E==B)))) { res = mix(E, F, 0.5); }\n" +
-                        "    if (B==D && B!=E && ((E==A && (B==I || E==C)) || (E==G && (B==I || E==F)))) { res = mix(E, D, 0.5); }\n" +
-                        "    if (A==C && A!=E && ((E==B && (A==I || E==D)) || (E==F && (A==I || E==H)))) { res = mix(E, C, 0.5); }\n" +
-                        "    if (G==I && G!=E && ((E==H && (G==I || E==F)) || (E==D && (G==I || E==B)))) { res = mix(E, I, 0.5); }\n" +
-                        "    if (B==F && B!=E && ((E==A && (B==C || E==I)) || (E==G && (B==C || E==H)))) { res = mix(E, B, 0.5); }\n" +
-                        "    if (D==H && D!=E && ((E==C && (D==A || E==I)) || (E==G && (D==A || E==F)))) { res = mix(E, H, 0.5); }\n" +
-                        "    if (A==G && A!=E && ((E==C && (A==B || E==D)) || (E==I && (A==B || E==F)))) { res = mix(E, A, 0.5); }\n" +
-                        "    if (C==I && C!=E && ((E==A && (C==H || E==D)) || (E==G && (C==H || E==F)))) { res = mix(E, C, 0.5); }\n"
+                    "if (xbrReduce(H)==xbrReduce(F) && xbrReduce(H)!=xbrReduce(E) && ((xbrReduce(E)==xbrReduce(G) && (xbrReduce(H)==xbrReduce(I) || xbrReduce(E)==xbrReduce(D))) || (xbrReduce(E)==xbrReduce(C) && (xbrReduce(H)==xbrReduce(I) || xbrReduce(E)==xbrReduce(B))))) { res = mix(E, F, 0.5); }\n" +
+                        "    if (xbrReduce(B)==xbrReduce(D) && xbrReduce(B)!=xbrReduce(E) && ((xbrReduce(E)==xbrReduce(A) && (xbrReduce(B)==xbrReduce(I) || xbrReduce(E)==xbrReduce(C))) || (xbrReduce(E)==xbrReduce(G) && (xbrReduce(B)==xbrReduce(I) || xbrReduce(E)==xbrReduce(F))))) { res = mix(E, D, 0.5); }\n" +
+                        "    if (xbrReduce(A)==xbrReduce(C) && xbrReduce(A)!=xbrReduce(E) && ((xbrReduce(E)==xbrReduce(B) && (xbrReduce(A)==xbrReduce(I) || xbrReduce(E)==xbrReduce(D))) || (xbrReduce(E)==xbrReduce(F) && (xbrReduce(A)==xbrReduce(I) || xbrReduce(E)==xbrReduce(H))))) { res = mix(E, C, 0.5); }\n" +
+                        "    if (xbrReduce(G)==xbrReduce(I) && xbrReduce(G)!=xbrReduce(E) && ((xbrReduce(E)==xbrReduce(H) && (xbrReduce(G)==xbrReduce(I) || xbrReduce(E)==xbrReduce(F))) || (xbrReduce(E)==xbrReduce(D) && (xbrReduce(G)==xbrReduce(I) || xbrReduce(E)==xbrReduce(B))))) { res = mix(E, I, 0.5); }\n" +
+                        "    if (xbrReduce(B)==xbrReduce(F) && xbrReduce(B)!=xbrReduce(E) && ((xbrReduce(E)==xbrReduce(A) && (xbrReduce(B)==xbrReduce(C) || xbrReduce(E)==xbrReduce(I))) || (xbrReduce(E)==xbrReduce(G) && (xbrReduce(B)==xbrReduce(C) || xbrReduce(E)==xbrReduce(H))))) { res = mix(E, B, 0.5); }\n" +
+                        "    if (xbrReduce(D)==xbrReduce(H) && xbrReduce(D)!=xbrReduce(E) && ((xbrReduce(E)==xbrReduce(C) && (xbrReduce(D)==xbrReduce(A) || xbrReduce(E)==xbrReduce(I))) || (xbrReduce(E)==xbrReduce(G) && (xbrReduce(D)==xbrReduce(A) || xbrReduce(E)==xbrReduce(F))))) { res = mix(E, H, 0.5); }\n" +
+                        "    if (xbrReduce(A)==xbrReduce(G) && xbrReduce(A)!=xbrReduce(E) && ((xbrReduce(E)==xbrReduce(C) && (xbrReduce(A)==xbrReduce(B) || xbrReduce(E)==xbrReduce(D))) || (xbrReduce(E)==xbrReduce(I) && (xbrReduce(A)==xbrReduce(B) || xbrReduce(E)==xbrReduce(F))))) { res = mix(E, A, 0.5); }\n" +
+                        "    if (xbrReduce(C)==xbrReduce(I) && xbrReduce(C)!=xbrReduce(E) && ((xbrReduce(E)==xbrReduce(A) && (xbrReduce(C)==xbrReduce(H) || xbrReduce(E)==xbrReduce(D))) || (xbrReduce(E)==xbrReduce(G) && (xbrReduce(C)==xbrReduce(H) || xbrReduce(E)==xbrReduce(F))))) { res = mix(E, C, 0.5); }\n"
                 )
         )
     }
