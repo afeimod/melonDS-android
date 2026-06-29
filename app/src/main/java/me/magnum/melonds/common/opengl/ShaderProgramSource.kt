@@ -712,15 +712,15 @@ class ShaderProgramSource private constructor(val textureFiltering: TextureFilte
                     "" +
                     "    // 9-point dot bloom on the Hq4x output\n" +
                     "    vec2 ps = 1.0 / vec2($TEXTURE_WIDTH, $TEXTURE_HEIGHT);\n" +
-                    "    vec3 c00 = texture2D(tex, vUV + vec2(-ps.x, -ps.y)).bgr;\n" +
-                    "    vec3 c10 = texture2D(tex, vUV + vec2( 0.0,  -ps.y)).bgr;\n" +
-                    "    vec3 c20 = texture2D(tex, vUV + vec2( ps.x,  -ps.y)).bgr;\n" +
-                    "    vec3 c01 = texture2D(tex, vUV + vec2(-ps.x,   0.0)).bgr;\n" +
+                    "    vec3 c00 = texture2D(tex, uv[0].xy + vec2(-ps.x, -ps.y)).bgr;\n" +
+                    "    vec3 c10 = texture2D(tex, uv[0].xy + vec2( 0.0,  -ps.y)).bgr;\n" +
+                    "    vec3 c20 = texture2D(tex, uv[0].xy + vec2( ps.x,  -ps.y)).bgr;\n" +
+                    "    vec3 c01 = texture2D(tex, uv[0].xy + vec2(-ps.x,   0.0)).bgr;\n" +
                     "    vec3 c11 = res;\n" +
-                    "    vec3 c21 = texture2D(tex, vUV + vec2( ps.x,   0.0)).bgr;\n" +
-                    "    vec3 c02 = texture2D(tex, vUV + vec2(-ps.x,  ps.y)).bgr;\n" +
-                    "    vec3 c12 = texture2D(tex, vUV + vec2( 0.0,   ps.y)).bgr;\n" +
-                    "    vec3 c22 = texture2D(tex, vUV + vec2( ps.x,   ps.y)).bgr;\n" +
+                    "    vec3 c21 = texture2D(tex, uv[0].xy + vec2( ps.x,   0.0)).bgr;\n" +
+                    "    vec3 c02 = texture2D(tex, uv[0].xy + vec2(-ps.x,  ps.y)).bgr;\n" +
+                    "    vec3 c12 = texture2D(tex, uv[0].xy + vec2( 0.0,   ps.y)).bgr;\n" +
+                    "    vec3 c22 = texture2D(tex, uv[0].xy + vec2( ps.x,   ps.y)).bgr;\n" +
                     "    vec3 mid = dotLookup(vec2( 0.0,  0.0), c11);\n" +
                     "    vec3 sum = vec3(0.0);\n" +
                     "    sum += dotLookup(vec2(-1.0, -1.0), c00);\n" +
