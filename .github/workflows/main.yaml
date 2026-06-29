@@ -4,6 +4,10 @@ name: melonDS Android Nightly Build
 on:
   workflow_dispatch:
 
+# 给 GITHUB_TOKEN 写权限,release-action / push tag 才能动
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest

@@ -4,6 +4,10 @@ name: melonDS Android Release
 on:
   workflow_dispatch:
 
+# 给 GITHUB_TOKEN 写权限
+permissions:
+  contents: write
+
 jobs:
   github-release:
     runs-on: ubuntu-latest
